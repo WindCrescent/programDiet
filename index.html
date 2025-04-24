@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitPlan Generator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Custom styles */
+        body {
+            background-color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .program-card {
+            transition: all 0.3s ease;
+        }
+        .program-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .tab-active {
+            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
+        }
+        .tab {
+            cursor: pointer;
+        }
+        .week-header {
+            cursor: pointer;
+        }
+        /* Loader */
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3b82f6;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 40px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            background-color: #e5e7eb;
+            border-radius: 9999px;
+            height: 8px;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            border-radius: 9999px;
+            background-color: #3b82f6;
+            transition: width 0.5s ease;
+        }
+        /* Print styles */
+        @media print {
+            .no-print {
+                display: none;
+            }
+            .print-section {
+                display: block !important;
+            }
+            body {
+                background-color: white;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="min-h-screen pb-10">
+        <!-- Header -->
+        <header class="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center">
+                    <i class="fas fa-dumbbell text-blue-600 text-2xl mr-2"></i>
+                    <h1 class="text-xl font-bold text-blue-900">FitPlan</h1>
+                </div>
+                <div>
+                    <button id="print-btn" class="hidden p-2 text-blue-500 hover:text-blue-700" onclick="printProgram()">
+                        <i class="fas fa-print"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <main class="container mx-auto px-4 pt-20">
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="text-center py-8">
+                <div class="mb-8">
+                    <i class="fas fa-heartbeat text-blue-500 text-6xl mb-4"></i>
+                    <h2 class="text-3xl font-bold text-blue-900 mb-2">Weight Loss Program Generator</h2>
+                    <p class="text-gray-600 mb-6">Create your personalized weight loss plan in minutes</p>
+                </div>
+                
+                <div class="program-card bg-white rounded-lg shadow-md p-6 mb-4">
+                    <h3 class="text-xl font-bold text-blue-800 mb-2">How it works</h3>
+                    <ul class="text-left text-gray-700 mb-4">
+                        <li class="mb-2 flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                            <span>Enter your current stats and goals</span>
+                        </li>
+                        <li class="mb-2 flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                            <span>Our algorithm calculates your calorie needs</span>
+                        </li>
+                        <li class="mb-2 flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                            <span>Get a customized weekly meal and workout plan</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                            <span>Follow the plan and track your progress</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <button id="start-btn" class="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                    Get Started
+                </button>
+            </div>
+
+            <!-- Step 1: Basic Information Form -->
+            <div id="step1-form" class="hidden">
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 33%;"></div>
+                </div>
+                
+                <h2 class="text-xl font-bold mb-4 text-blue-800">Step 1: Basic Information</h2>
+                
+                <form class="bg-white rounded-lg shadow-md p-6">
+                    <div class="mb-4">
+                        <div class="flex justify-center space-x-4 mb-4">
+                            <label class="inline-flex items-center">
+                                <input type="radio" class="form-radio text-blue-600" name="unit" value="metric" checked>
+                                <span class="ml-2">Metric (cm/kg)</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" class="form-radio text-blue-600" name="unit" value="imperial">
+                                <span class="ml-2">Imperial (in/lbs)</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium mb-2">
+                            Height (<span class="unit-label">cm</span>)
+                        </label>
+                        <input
+                            type="number"
+                            id="height"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g., 175"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium mb-2">
+                            Current Weight (<span class="unit-label">kg</span>)
+                        </label>
+                        <input
+                            type="number"
+                            id="current-weight"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g., 80"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium mb-2">
+                            Target Weight (<span class="unit-label">kg</span>)
+                        </label>
+                        <input
+                            type="number"
+                            id="target-weight"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g., 70"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium mb-2">
+                            Target Timeframe (weeks)
+                        </label>
+                        <input
+                            type="number"
+                            id="weeks"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g., 8"
+                            required
+                            min="1"
+                            max="52"
+                        >
+                    </div>
+                    
+                    <div class="mt-6 flex justify-between">
+                        <button
+                            type="button"
+                            class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 focus:outline-none transition-colors"
+                            onclick="showWelcomeScreen()"
+                        >
+                            Back
+                        </button>
+                        <button
+                            type="button"
+                            class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                            onclick="goToStep2()"
+                        >
+                            Next Step
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 2: Additional Details Form -->
+            <div id="step2-form" class="hidden">
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 66%;"></div>
+                </div>
+                
+                <h2 class="text-xl font-bold mb-4 text-blue-800">Step 2: Additional Details</h2>
+                
+                <form class="bg-white rounded-lg shadow-md p-6">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium mb-2">
+                            Age
+                        </label>
+                        <input
+                            type="number"
+                            id="age"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g., 35"
+                            required
+                            min="18"
+                            max="90"
+                        >
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium mb-2">
+                            Gender
+                        </label>
+                        <select
+                            id="gender"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium mb-2">
+                            Activity Level
+                        </label>
+                        <select
+                            id="activity-level"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="sedentary">Sedentary (little or no exercise)</option>
+                            <option value="light">Light (light exercise 1-3 days/week)</option>
+                            <option value="moderate" selected>Moderate (moderate exercise 3-5 days/week)</option>
+                            <option value="active">Active (hard exercise 6-7 days/week)</option>
+                            <option value="veryActive">Very Active (very hard daily exercise or physical job)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium mb-2">
+                            Dietary Preferences (Optional)
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="inline-flex items-center p-2 border border-gray-300 rounded-lg">
+                                <input type="checkbox" class="form-checkbox text-blue-600 mr-2" id="pref-vegetarian">
+                                <span>Vegetarian</span>
+                            </label>
+                            <label class="inline-flex items-center p-2 border border-gray-300 rounded-lg">
+                                <input type="checkbox" class="form-checkbox text-blue-600 mr-2" id="pref-low-carb">
+                                <span>Low Carb</span>
+                            </label>
+                            <label class="inline-flex items-center p-2 border border-gray-300 rounded-lg">
+                                <input type="checkbox" class="form-checkbox text-blue-600 mr-2" id="pref-high-protein">
+                                <span>High Protein</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex justify-between">
+                        <button
+                            type="button"
+                            class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 focus:outline-none transition-colors"
+                            onclick="goToStep1()"
+                        >
+                            Back
+                        </button>
+                        <button
+                            type="button"
+                            class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                            onclick="generateProgram()"
+                        >
+                            Generate Program
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Loading Screen -->
+            <div id="loading-screen" class="hidden text-center py-20">
+                <div class="loader"></div>
+                <p class="text-gray-600 mt-4">Creating your personalized program...</p>
+            </div>
+
+            <!-- Results Screen -->
+            <div id="results-screen" class="hidden">
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 100%;"></div>
+                </div>
+                
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-blue-800">Your Custom Weight Loss Program</h2>
+                    <button id="share-btn" class="text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-share-alt"></i>
+                    </button>
+                </div>
+                
+                <div id="program-summary" class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <!-- Will be filled with program summary -->
+                </div>
+                
+                <!-- Tabs -->
+                <div class="flex border-b border-gray-200 mb-6 no-print">
+                    <div class="tab tab-active px-4 py-2 font-medium" data-tab="weekly-plan">Weekly Plan</div>
+                    <div class="tab px-4 py-2 font-medium text-gray-500" data-tab="nutrition">Nutrition</div>
+                    <div class="tab px-4 py-2 font-medium text-gray-500" data-tab="workout">Workout</div>
+                    <div class="tab px-4 py-2 font-medium text-gray-500" data-tab="tips">Tips</div>
+                </div>
+                
+                <!-- Tab Contents -->
+                <div id="tab-contents">
+                    <!-- Weekly Plan Tab -->
+                    <div id="weekly-plan-content" class="tab-content">
+                        <!-- Will be filled with weekly plans -->
+                    </div>
+                    
+                    <!-- Nutrition Tab -->
+                    <div id="nutrition-content" class="tab-content hidden">
+                        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <h3 class="text-lg font-bold text-blue-800 mb-4">Nutritional Guidelines</h3>
+                            
+                            <div class="mb-4">
+                                <h4 class="font-medium mb-2">Macronutrient Distribution</h4>
+                                <div class="flex items-center mb-2">
+                                    <div class="w-24 text-gray-600">Protein:</div>
+                                    <div class="flex-1 bg-gray-200 rounded-full h-4">
+                                        <div class="bg-blue-500 h-4 rounded-full" style="width: 35%"></div>
+                                    </div>
+                                    <div class="w-16 text-right text-gray-600">35%</div>
+                                </div>
+                                <div class="flex items-center mb-2">
+                                    <div class="w-24 text-gray-600">Carbs:</div>
+                                    <div class="flex-1 bg-gray-200 rounded-full h-4">
+                                        <div class="bg-green-500 h-4 rounded-full" style="width: 40%"></div>
+                                    </div>
+                                    <div class="w-16 text-right text-gray-600">40%</div>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="w-24 text-gray-600">Fats:</div>
+                                    <div class="flex-1 bg-gray-200 rounded-full h-4">
+                                        <div class="bg-yellow-500 h-4 rounded-full" style="width: 25%"></div>
+                                    </div>
+                                    <div class="w-16 text-right text-gray-600">25%</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h4 class="font-medium mb-2">Foods to Embrace</h4>
+                                <ul class="list-disc pl-5 text-gray-700">
+                                    <li>Lean proteins (chicken, turkey, fish, tofu)</li>
+                                    <li>Vegetables (especially leafy greens)</li>
+                                    <li>Whole grains (brown rice, quinoa, oats)</li>
+                                    <li>Healthy fats (avocado, nuts, olive oil)</li>
+                                    <li>Fresh fruits (berries, apples, citrus)</li>
+                                </ul>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-medium mb-2">Foods to Limit</h4>
+                                <ul class="list-disc pl-5 text-gray-700">
+                                    <li>Processed foods and sugary snacks</li>
+                                    <li>Refined carbohydrates (white bread, pastries)</li>
+                                    <li>Sugar-sweetened beverages</li>
+                                    <li>High-sodium foods</li>
+                                    <li>Deep-fried foods</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-bold text-blue-800 mb-4">Meal Timing</h3>
+                            
+                            <div class="mb-4">
+                                <p class="text-gray-700 mb-2">For optimal results, try to:</p>
+                                <ul class="list-disc pl-5 text-gray-700">
+                                    <li>Eat within 1 hour of waking up</li>
+                                    <li>Space meals 3-4 hours apart</li>
+                                    <li>Include protein with each meal</li>
+                                    <li>Stop eating 3 hours before bedtime</li>
+                                    <li>Stay hydrated throughout the day</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Workout Tab -->
+                    <div id="workout-content" class="tab-content hidden">
+                        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <h3 class="text-lg font-bold text-blue-800 mb-4">Exercise Guidelines</h3>
+                            
+                            <div class="mb-4">
+                                <h4 class="font-medium mb-2">Cardio Recommendations</h4>
+                                <p class="text-gray-700 mb-2">Start with 3-4 days per week, gradually increase to 5-6 days:</p>
+                                <ul class="list-disc pl-5 text-gray-700 mb-2">
+                                    <li>Low intensity: Walking, light cycling (30-45 minutes)</li>
+                                    <li>Moderate intensity: Jogging, swimming, elliptical (25-40 minutes)</li>
+                                    <li>High intensity: HIIT, sprints, stair climbing (15-25 minutes)</li>
+                                </ul>
+                                <p class="text-gray-700">Alternate between intensity levels for best results.</p>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-medium mb-2">Strength Training</h4>
+                                <p class="text-gray-700 mb-2">Include 2-3 days per week, focusing on:</p>
+                                <ul class="list-disc pl-5 text-gray-700 mb-2">
+                                    <li>Compound movements (squats, lunges, push-ups, rows)</li>
+                                    <li>Core strengthening exercises</li>
+                                    <li>Resistance training with moderate weights</li>
+                                </ul>
+                                <p class="text-gray-700">Allow 48 hours of recovery between training the same muscle groups.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-bold text-blue-800 mb-4">Core Exercises for Flat Stomach</h3>
+                            
+                            <div class="mb-4">
+                                <p class="text-gray-700 mb-2">Include these exercises in your routine 3 times per week:</p>
+                                <ul class="list-disc pl-5 text-gray-700">
+                                    <li>Planks (front and side): 3 sets of 30-60 seconds</li>
+                                    <li>Crunches: 3 sets of 15-20 reps</li>
+                                    <li>Russian twists: 3 sets of 15-20 reps per side</li>
+                                    <li>Mountain climbers: 3 sets of 30 seconds</li>
+                                    <li>Leg raises: 3 sets of 12-15 reps</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tips Tab -->
+                    <div id="tips-content" class="tab-content hidden">
+                        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <h3 class="text-lg font-bold text-blue-800 mb-4">Success Strategies</h3>
+                            
+                            <div class="mb-6">
+                                <h4 class="font-medium mb-2">Tracking Progress</h4>
+                                <ul class="list-disc pl-5 text-gray-700">
+                                    <li>Weigh yourself weekly, same day and time</li>
+                                    <li>Take measurements every 2 weeks (waist, hips, chest)</li>
+                                    <li>Take progress photos from front, side, and back</li>
+                                    <li>Keep a food journal for accountability</li>
+                                    <li>Record workout performance to track improvements</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <h4 class="font-medium mb-2">Overcoming Plateaus</h4>
+                                <ul class="list-disc pl-5 text-gray-700">
+                                    <li>Reassess your calorie intake (may need adjustment)</li>
+                                    <li>Change up your workout routine every 3-4 weeks</li>
+                                    <li>Increase workout intensity or duration</li>
+                                    <li>Ensure adequate sleep (7-8 hours)</li>
+                                    <li>Manage stress through meditation or other techniques</li>
+                                </ul>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-medium mb-2">Staying Motivated</h4>
+                                <ul class="list-disc pl-5 text-gray-700">
+                                    <li>Set small, achievable milestones</li>
+                                    <li>Reward yourself (non-food rewards) for hitting goals</li>
+                                    <li>Find a workout buddy or support group</li>
+                                    <li>Focus on non-scale victories (energy, clothes fit, etc.)</li>
+                                    <li>Schedule workouts like important appointments</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-bold text-blue-800 mb-4">Tips for Flat Stomach</h3>
+                            
+                            <ul class="list-disc pl-5 text-gray-700">
+                                <li>Eat slowly to avoid swallowing air (causes bloating)</li>
+                                <li>Avoid carbonated beverages and chewing gum</li>
+                                <li>Reduce sodium intake to minimize water retention</li>
+                                <li>Maintain good posture throughout the day</li>
+                                <li>Include foods with probiotics for gut health</li>
+                                <li>Practice stress-reducing techniques (stress hormones can cause belly fat)</li>
+                                <li>Avoid eating large meals before bedtime</li>
+                                <li>Stay consistent with both diet and exercise</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 flex justify-between no-print">
+                    <button
+                        class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 focus:outline-none transition-colors"
+                        onclick="resetForm()"
+                    >
+                        Create New Program
+                    </button>
+                    <button
+                        id="save-btn"
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:outline-none transition-colors"
+                    >
+                        Save Program
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Global variables to store user inputs and program data
+        let userData = {
+            unit: 'metric',
+            height: '',
+            currentWeight: '',
+            targetWeight: '',
+            weeks: '',
+            age: '',
+            gender: 'male',
+            activityLevel: 'moderate',
+            preferences: {
+                vegetarian: false,
+                lowCarb: false,
+                highProtein: false
+            }
+        };
+        
+        let programData = null;
+        
+        // DOM elements
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const step1Form = document.getElementById('step1-form');
+        const step2Form = document.getElementById('step2-form');
+        const loadingScreen = document.getElementById('loading-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        const unitLabels = document.querySelectorAll('.unit-label');
+        const startBtn = document.getElementById('start-btn');
+        const printBtn = document.getElementById('print-btn');
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Start button
+            startBtn.addEventListener('click', function() {
+                showStep1Form();
+            });
+            
+            // Unit selection
+            const unitRadios = document.querySelectorAll('input[name="unit"]');
+            unitRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    userData.unit = this.value;
+                    updateUnitLabels();
+                });
+            });
+            
+            // Tab switching
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    switchTab(tabId);
+                });
+            });
+            
+            // Week accordion toggle
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('week-header') || e.target.parentElement.classList.contains('week-header')) {
+                    const header = e.target.classList.contains('week-header') ? e.target : e.target.parentElement;
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('i');
+                    
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                        icon.classList.remove('fa-chevron-up');
+                        icon.classList.add('fa-chevron-down');
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + "px";
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-up');
+                    }
+                }
+            });
+            
+            // Save button
+            document.getElementById('save-btn').addEventListener('click', function() {
+                alert('Program saved! In a full version, this would save to your account or download as PDF.');
+            });
+            
+            // Share button
+            document.getElementById('share-btn').addEventListener('click', function() {
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'My Weight Loss Program',
+                        text: 'Check out my personalized weight loss program!',
+                        url: window.location.href
+                    })
+                    .catch((error) => console.log('Error sharing:', error));
+                } else {
+                    alert('Web Share API not supported. Copy this URL to share.');
+                }
+            });
+            
+            // Print button
+            printBtn.addEventListener('click', printProgram);
+        });
+        
+        // Function to show welcome screen
+        function showWelcomeScreen() {
+            welcomeScreen.classList.remove('hidden');
+            step1Form.classList.add('hidden');
+            step2Form.classList.add('hidden');
+            loadingScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+            printBtn.classList.add('hidden');
+        }
+        
+        // Function to show step 1 form
+        function showStep1Form() {
+            welcomeScreen.classList.add('hidden');
+            step1Form.classList.remove('hidden');
+            step2Form.classList.add('hidden');
+            loadingScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+            printBtn.classList.add('hidden');
+        }
+        
+        // Function to go to step 2
+        function goToStep1() {
+            step1Form.classList.remove('hidden');
+            step2Form.classList.add('hidden');
+        }
+        
+        // Function to go to step 2
+        function goToStep2() {
+            // Validate step 1 inputs
+            const height = document.getElementById('height').value;
+            const currentWeight = document.getElementById('current-weight').value;
+            const targetWeight = document.getElementById('target-weight').value;
+            const weeks = document.getElementById('weeks').value;
+            
+            if (!height || !currentWeight || !targetWeight || !weeks) {
+                alert('Please fill out all required fields');
+                return;
+            }
+            
+            // Store the data
+            userData.height = height;
+            userData.currentWeight = currentWeight;
+            userData.targetWeight = targetWeight;
+            userData.weeks = weeks;
+            
+            // Show step 2 form
+            step1Form.classList.add('hidden');
+            step2Form.classList.remove('hidden');
+        }
+        
+        // Function to update unit labels
+        function updateUnitLabels() {
+            unitLabels.forEach(label => {
+                if (userData.unit === 'metric') {
+                    label.textContent = label.parentElement.textContent.includes('Height') ? 'cm' : 'kg';
+                } else {
+                    label.textContent = label.parentElement.textContent.includes('Height') ? 'inches' : 'lbs';
+                }
+            });
+        }
+        
+        // Function to generate program
+        function generateProgram() {
+            // Validate step 2 inputs
+            const age = document.getElementById('age').value;
+            if (!age) {
+                alert('Please enter your age');
+                return;
+            }
+            
+            // Store the data
+            userData.age = age;
+            userData.gender = document.getElementById('gender').value;
+            userData.activityLevel = document.getElementById('activity-level').value;
+            userData.preferences.vegetarian = document.getElementById('pref-vegetarian').checked;
+            userData.preferences.lowCarb = document.getElementById('pref-low-carb').checked;
+            userData.preferences.highProtein = document.getElementById('pref-high-protein').checked;
+            
+            // Show loading screen
+            step2Form.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            
+            // Simulate loading time (in real app, this would be an API call)
+            setTimeout(() => {
+                calculateProgram();
+                displayResults();
+                loadingScreen.classList.add('hidden');
+                resultsScreen.classList.remove('hidden');
+                printBtn.classList.remove('hidden');
+            }, 2000);
+        }
+        
+        // Calculate BMR using Mifflin-St Jeor Equation
+        function calculateBMR() {
+            const weightKg = userData.unit === 'metric' ? parseFloat(userData.currentWeight) : parseFloat(userData.currentWeight) * 0.453592;
+            const heightCm = userData.unit === 'metric' ? parseFloat(userData.height) : parseFloat(userData.height) * 2.54;
+            const ageYears = parseFloat(userData.age);
+            
+            let bmr;
+            if (userData.gender === 'male') {
+                bmr = 10 * weightKg + 6.25 * heightCm - 5 * ageYears + 5;
+            } else {
+                bmr = 10 * weightKg + 6.25 * heightCm - 5 * ageYears - 161;
+            }
+            
+            return Math.round(bmr);
+        }
+        
+        // Calculate TDEE (Total Daily Energy Expenditure)
+        function calculateTDEE(bmr) {
+            const activityMultipliers = {
+                sedentary: 1.2,
+                light: 1.375,
+                moderate: 1.55,
+                active: 1.725,
+                veryActive: 1.9
+            };
+            
+            return Math.round(bmr * activityMultipliers[userData.activityLevel]);
+        }
+        
+        // Generate meal options based on calorie target and preferences
+        function generateMealOptions(calorieTarget, weekNum) {
+            // Distribution of calories
+            const breakfast = Math.round(calorieTarget * 0.25);
+            const lunch = Math.round(calorieTarget * 0.35);
+            const dinner = Math.round(calorieTarget * 0.25);
+            const snacks = Math.round(calorieTarget * 0.15);
+            
+            // Meal options database - simplified for demo
+            const breakfastOptions = [
+                { name: "Protein smoothie with berries and spinach", calories: breakfast, vegetarian: true, lowCarb: false, highProtein: true },
+                { name: "Greek yogurt with nuts, seeds, and honey", calories: breakfast, vegetarian: true, lowCarb: true, highProtein: true },
+                { name: "Omelette with vegetables and avocado", calories: breakfast, vegetarian: true, lowCarb: true, highProtein: true },
+                { name: "Whole grain toast with eggs and smoked salmon", calories: breakfast, vegetarian: false, lowCarb: false, highProtein: true },
+                { name: "Overnight oats with almond milk and fruit", calories: breakfast, vegetarian: true, lowCarb: false, highProtein: false },
+                { name: "Protein pancakes with berries", calories: breakfast, vegetarian: true, lowCarb: false, highProtein: true }
+            ];
+            
+            const lunchOptions = [
+                { name: "Grilled chicken salad with olive oil dressing", calories: lunch, vegetarian: false, lowCarb: true, highProtein: true },
+                { name: "Quinoa bowl with roasted vegetables and feta", calories: lunch, vegetarian: true, lowCarb: false, highProtein: false },
+                { name: "Tuna wrap with mixed greens and hummus", calories: lunch, vegetarian: false, lowCarb: false, highProtein: true },
+                { name: "Lentil soup with side salad", calories: lunch, vegetarian: true, lowCarb: false, highProtein: true },
+                { name: "Turkey and avocado lettuce wraps", calories: lunch, vegetarian: false, lowCarb: true, highProtein: true },
+                { name: "Buddha bowl with tofu, brown rice and vegetables", calories: lunch, vegetarian: true, lowCarb: false, highProtein: true }
+            ];
+            
+            const dinnerOptions = [
+                { name: "Baked fish with roasted vegetables", calories: dinner, vegetarian: false, lowCarb: true, highProtein: true },
+                { name: "Grilled tofu steak with steamed broccoli", calories: dinner, vegetarian: true, lowCarb: true, highProtein: true },
+                { name: "Turkey breast with sweet potato mash", calories: dinner, vegetarian: false, lowCarb: false, highProtein: true },
+                { name: "Vegetable stir-fry with brown rice", calories: dinner, vegetarian: true, lowCarb: false, highProtein: false },
+                { name: "Salmon with asparagus and quinoa", calories: dinner, vegetarian: false, lowCarb: false, highProtein: true },
+                { name: "Zucchini noodles with turkey meatballs", calories: dinner, vegetarian: false, lowCarb: true, highProtein: true }
+            ];
+            
+            const snackOptions = [
+                { name: "Apple with almond butter", calories: snacks/2, vegetarian: true, lowCarb: false, highProtein: false },
+                { name: "Greek yogurt with berries", calories: snacks/2, vegetarian: true, lowCarb: true, highProtein: true },
+                { name: "Carrot sticks with hummus", calories: snacks/2, vegetarian: true, lowCarb: true, highProtein: false },
+                { name: "Handful of mixed nuts", calories: snacks/2, vegetarian: true, lowCarb: true, highProtein: true },
+                { name: "Protein shake with water", calories: snacks/2, vegetarian: true, lowCarb: true, highProtein: true },
+                { name: "Celery with cream cheese", calories: snacks/2, vegetarian: true, lowCarb: true, highProtein: false }
+            ];
+            
+            // Filter based on preferences
+            let filteredBreakfast = [...breakfastOptions];
+            let filteredLunch = [...lunchOptions];
+            let filteredDinner = [...dinnerOptions];
+            let filteredSnacks = [...snackOptions];
+            
+            if (userData.preferences.vegetarian) {
+                filteredBreakfast = filteredBreakfast.filter(item => item.vegetarian);
+                filteredLunch = filteredLunch.filter(item => item.vegetarian);
+                filteredDinner = filteredDinner.filter(item => item.vegetarian);
+                filteredSnacks = filteredSnacks.filter(item => item.vegetarian);
+            }
+            
+            if (userData.preferences.lowCarb) {
+                filteredBreakfast = filteredBreakfast.filter(item => item.lowCarb);
+                filteredLunch = filteredLunch.filter(item => item.lowCarb);
+                filteredDinner = filteredDinner.filter(item => item.lowCarb);
+                filteredSnacks = filteredSnacks.filter(item => item.lowCarb);
+            }
+            
+            if (userData.preferences.highProtein) {
+                filteredBreakfast = filteredBreakfast.filter(item => item.highProtein);
+                filteredLunch = filteredLunch.filter(item => item.highProtein);
+                filteredDinner = filteredDinner.filter(item => item.highProtein);
+                filteredSnacks = filteredSnacks.filter(item => item.highProtein);
+            }
+            
+            // If filters resulted in empty arrays, use original options
+            if (filteredBreakfast.length === 0) filteredBreakfast = breakfastOptions;
+            if (filteredLunch.length === 0) filteredLunch = lunchOptions;
+            if (filteredDinner.length === 0) filteredDinner = dinnerOptions;
+            if (filteredSnacks.length === 0) filteredSnacks = snackOptions;
+            
+            // Select 3 random options for each meal
+            const randomize = (array) => {
+                const shuffled = [...array].sort(() => 0.5 - Math.random());
+                return shuffled.slice(0, 3);
+            };
+            
+            return {
+                breakfast: randomize(filteredBreakfast),
+                lunch: randomize(filteredLunch),
+                dinner: randomize(filteredDinner),
+                snacks: randomize(filteredSnacks)
+            };
+        }
+        
+        // Generate workout plan based on weeks
+        function generateWorkoutPlan(weekNum) {
+            // Progressively more challenging workouts
+            const intensity = Math.min(0.4 + (weekNum * 0.1), 0.9); // Increases each week, caps at 0.9
+            
+            const cardioMinutes = Math.round(20 + (weekNum * 5)); // Starts at 20 min, adds 5 min each week
+            const cardioDays = Math.min(3 + Math.floor(weekNum / 2), 5); // Increases frequency over time, caps at 5
+            
+            const strengthTrainingDays = Math.min(2 + Math.floor(weekNum / 3), 4); // Caps at 4 days
+            const strengthReps = 12 - Math.floor(weekNum / 2); // Decreases reps as weeks progress (more weight)
+            const strengthSets = 2 + Math.floor(weekNum / 2); // Increases sets as weeks progress
+            
+            return {
+                cardio: {
+                    minutes: cardioMinutes,
+                    daysPerWeek: cardioDays,
+                    type: intensity < 0.6 ? "Moderate walking/cycling" : "Interval training"
+                },
+                strength: {
+                    daysPerWeek: strengthTrainingDays,
+                    reps: strengthReps,
+                    sets: strengthSets,
+                    focus: ["Core/Abs", "Full body", "Upper body", "Lower body"]
+                }
+            };
+        }
+        
+        // Calculate full program
+        function calculateProgram() {
+            const bmr = calculateBMR();
+            const tdee = calculateTDEE(bmr);
+            
+            // Calculate weekly calorie targets
+            const weightDiff = parseFloat(userData.currentWeight) - parseFloat(userData.targetWeight);
+            const weeklyTargetKg = userData.unit === 'metric' ? 
+                weightDiff / parseFloat(userData.weeks) : 
+                (weightDiff * 0.453592) / parseFloat(userData.weeks);
+            
+            // Create a gradually decreasing calorie target
+            const caloriesByWeek = [];
+            const finalWeekCalories = tdee - 500; // Base deficit
+            const initialWeekCalories = tdee - 300; // Smaller initial deficit
+            const calorieStep = (initialWeekCalories - finalWeekCalories) / (parseFloat(userData.weeks) - 1);
+            
+            for (let i = 0; i < parseFloat(userData.weeks); i++) {
+                caloriesByWeek.push(Math.round(initialWeekCalories - (calorieStep * i)));
+            }
+            
+            // Generate full program
+            const programWeeks = [];
+            
+            for (let i = 0; i < parseFloat(userData.weeks); i++) {
+                const weekNumber = i + 1;
+                const calorieTarget = caloriesByWeek[i];
+                const mealPlan = generateMealOptions(calorieTarget, i);
+                const workoutPlan = generateWorkoutPlan(i);
+                
+                programWeeks.push({
+                    week: weekNumber,
+                    calories: calorieTarget,
+                    meals: mealPlan,
+                    workout: workoutPlan
+                });
+            }
+            
+            // Store program data
+            programData = {
+                currentWeight: userData.unit === 'metric' ? `${userData.currentWeight} kg` : `${userData.currentWeight} lbs`,
+                targetWeight: userData.unit === 'metric' ? `${userData.targetWeight} kg` : `${userData.targetWeight} lbs`,
+                duration: `${userData.weeks} weeks`,
+                bmr: bmr,
+                tdee: tdee,
+                weeks: programWeeks
+            };
+        }
+        
+        // Display results
+        function displayResults() {
+            if (!programData) return;
+            
+            // Populate summary
+            const summary = document.getElementById('program-summary');
+            summary.innerHTML = `
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <p class="text-gray-700"><span class="font-semibold">Current Weight:</span> ${programData.currentWeight}</p>
+                        <p class="text-gray-700"><span class="font-semibold">Target Weight:</span> ${programData.targetWeight}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-700"><span class="font-semibold">Duration:</span> ${programData.duration}</p>
+                        <p class="text-gray-700"><span class="font-semibold">Daily Energy Need:</span> ${programData.tdee} calories</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-blue-600 font-semibold">
+                        Weight loss target: ${((parseFloat(userData.currentWeight) - parseFloat(userData.targetWeight)) / parseFloat(userData.weeks)).toFixed(1)} 
+                        ${userData.unit === 'metric' ? ' kg' : ' lbs'} per week
+                    </p>
+                </div>
+            `;
+            
+            // Populate weekly plans
+            const weeklyPlanContent = document.getElementById('weekly-plan-content');
+            weeklyPlanContent.innerHTML = '';
+            
+            programData.weeks.forEach(weekData => {
+                const weekElement = document.createElement('div');
+                weekElement.className = 'bg-white rounded-lg shadow-md mb-4 overflow-hidden';
+                
+                const weekHeader = document.createElement('div');
+                weekHeader.className = 'week-header flex justify-between items-center bg-blue-600 text-white p-4 cursor-pointer';
+                weekHeader.innerHTML = `
+                    <h3 class="text-lg font-semibold">Week ${weekData.week}</h3>
+                    <div class="flex items-center">
+                        <span class="mr-3">${weekData.calories} calories/day</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                `;
+                
+                const weekContent = document.createElement('div');
+                weekContent.className = 'overflow-hidden week-content';
+                weekContent.style.maxHeight = '0';
+                weekContent.style.transition = 'max-height 0.3s ease-out';
+                
+                weekContent.innerHTML = `
+                    <div class="p-4">
+                        <div class="mb-6">
+                            <h4 class="font-semibold text-blue-800 mb-2">Meal Plan</h4>
+                            <div class="pl-4">
+                                <p class="font-medium mb-1">Breakfast Options:</p>
+                                <ul class="list-disc pl-4 mb-3">
+                                    ${weekData.meals.breakfast.map(meal => `<li class="text-gray-700 mb-1">${meal.name} (~${meal.calories} cal)</li>`).join('')}
+                                </ul>
+                                
+                                <p class="font-medium mb-1">Lunch Options:</p>
+                                <ul class="list-disc pl-4 mb-3">
+                                    ${weekData.meals.lunch.map(meal => `<li class="text-gray-700 mb-1">${meal.name} (~${meal.calories} cal)</li>`).join('')}
+                                </ul>
+                                
+                                <p class="font-medium mb-1">Dinner Options:</p>
+                                <ul class="list-disc pl-4 mb-3">
+                                    ${weekData.meals.dinner.map(meal => `<li class="text-gray-700 mb-1">${meal.name} (~${meal.calories} cal)</li>`).join('')}
+                                </ul>
+                                
+                                <p class="font-medium mb-1">Snack Options:</p>
+                                <ul class="list-disc pl-4">
+                                    ${weekData.meals.snacks.map(meal => `<li class="text-gray-700 mb-1">${meal.name} (~${meal.calories} cal)</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-blue-800 mb-2">Workout Plan</h4>
+                            <div class="pl-4">
+                                <p class="mb-2"><span class="font-medium">Cardio:</span> ${weekData.workout.cardio.type}, ${weekData.workout.cardio.minutes} minutes, ${weekData.workout.cardio.daysPerWeek} days/week</p>
+                                <p class="mb-2"><span class="font-medium">Strength Training:</span> ${weekData.workout.strength.sets} sets, ${weekData.workout.strength.reps} reps, ${weekData.workout.strength.daysPerWeek} days/week</p>
+                                <p><span class="font-medium">Areas of Focus:</span> ${weekData.workout.strength.focus.join(', ')}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                weekElement.appendChild(weekHeader);
+                weekElement.appendChild(weekContent);
+                weeklyPlanContent.appendChild(weekElement);
+            });
+        }
+        
+        // Function to switch tabs
+        function switchTab(tabId) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                if (tab.getAttribute('data-tab') === tabId) {
+                    tab.classList.add('tab-active');
+                    tab.classList.remove('text-gray-500');
+                } else {
+                    tab.classList.remove('tab-active');
+                    tab.classList.add('text-gray-500');
+                }
+            });
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(`${tabId}-content`).classList.remove('hidden');
+        }
+        
+        // Function to reset form
+        function resetForm() {
+            // Reset form values
+            document.getElementById('height').value = '';
+            document.getElementById('current-weight').value = '';
+            document.getElementById('target-weight').value = '';
+            document.getElementById('weeks').value = '';
+            document.getElementById('age').value = '';
+            document.getElementById('gender').value = 'male';
+            document.getElementById('activity-level').value = 'moderate';
+            document.getElementById('pref-vegetarian').checked = false;
+            document.getElementById('pref-low-carb').checked = false;
+            document.getElementById('pref-high-protein').checked = false;
+            
+            // Reset data
+            userData = {
+                unit: 'metric',
+                height: '',
+                currentWeight: '',
+                targetWeight: '',
+                weeks: '',
+                age: '',
+                gender: 'male',
+                activityLevel: 'moderate',
+                preferences: {
+                    vegetarian: false,
+                    lowCarb: false,
+                    highProtein: false
+                }
+            };
+            programData = null;
+            
+            // Show step 1
+            showStep1Form();
+        }
+        
+        // Function to print program
+        function printProgram() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
